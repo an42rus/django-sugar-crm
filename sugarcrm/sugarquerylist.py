@@ -211,15 +211,8 @@ class QueryList:
         return q_str
 
     def get(self, **query):
-        query = self._build_query(**query)
+        qs = self.filter(**query)
 
-        qs = QueryList(self.model,
-                       query,
-                       order_by='',
-                       limit='',
-                       offset='',
-                       fields=self._fields,
-                       links_to_names=self._links_to_names)
         num = len(qs)
         if num == 1:
             return qs.first()
