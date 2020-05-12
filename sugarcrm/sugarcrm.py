@@ -21,11 +21,6 @@ class Sugarcrm:
         username -- username to allow login upon construction
         password -- password to allow login upon construction
         """
-
-        # String which holds the session id of the connection, required at
-        # every call after 'login'.
-        self._session = ""
-
         # url which is is called every time a request is made.
         self._url = url
 
@@ -33,8 +28,10 @@ class Sugarcrm:
         self._password = password
         self._isldap = is_ldap_member
 
+        # String which holds the session id of the connection, required at
+        # every call after 'login'.
         # Attempt to login.
-        self._login()
+        self._session = self._login()
 
         # Dynamically add the API methods to the object.
         for method in ['get_user_id', 'get_user_team_id',
@@ -55,7 +52,7 @@ class Sugarcrm:
                     except SugarError as error:
                         if error.is_invalid_session:
                             # Try to recover if session ID was lost
-                            self._login()
+                            self._session = self._login()
                             result = self._sendRequest(method_name,
                                                        [self._session] + list(args))
                         elif error.is_missing_module:
@@ -130,7 +127,7 @@ class Sugarcrm:
 
         x = self._sendRequest('login', args)
         try:
-            self._session = x['id']
+            return x['id']
         except KeyError:
             raise SugarUnhandledException
 
