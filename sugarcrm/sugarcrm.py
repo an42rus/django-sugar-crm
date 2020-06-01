@@ -31,48 +31,7 @@ class Sugarcrm:
         # String which holds the session id of the connection, required at
         # every call after 'login'.
         # Attempt to login.
-        self._session = self._login()
-
-        # Dynamically add the API methods to the object.
-        for method in ['get_user_id', 'get_user_team_id',
-                       'get_available_modules', 'get_module_fields',
-                       'get_entries_count', 'get_entry', 'get_entries',
-                       'get_entry_list', 'set_entry', 'set_entries',
-                       'set_relationship', 'set_relationships',
-                       'get_relationships', 'get_server_info',
-                       'set_note_attachment', 'get_note_attachment',
-                       'set_document_revision', 'get_document_revision',
-                       'search_by_module', 'get_report_entries', 'logout']:
-            # Use this to be able to evaluate "method".
-            def gen(method_name):
-                def f(*args):
-                    try:
-                        result = self._sendRequest(method_name,
-                                                   [self._session] + list(args))
-                    except SugarError as error:
-                        if error.is_invalid_session:
-                            # Try to recover if session ID was lost
-                            self._session = self._login()
-                            result = self._sendRequest(method_name,
-                                                       [self._session] + list(args))
-                        elif error.is_missing_module:
-                            return None
-                        elif error.is_null_response:
-                            return None
-                        elif error.is_invalid_request:
-                            print(method_name, args)
-                        else:
-                            raise SugarUnhandledException('%d, %s - %s' %
-                                                          (error.number,
-                                                           error.name,
-                                                           error.description))
-
-                    return result
-
-                f.__name__ = method_name
-                return f
-
-            self.__dict__[method] = gen(method)
+        self._session = self.login()
 
         # Add modules containers
         self.modules = {}
@@ -86,6 +45,107 @@ class Sugarcrm:
             from .sugarentry import SugarEntry
             self.modules[key] = SugarEntry(self, key)
         return self.modules[key]
+
+    def get_user_id(self, *args):
+        return self._method_call('get_user_id', *args)
+
+    def get_user_team_id(self, *args):
+        return self._method_call('get_user_team_id', *args)
+
+    def get_available_modules(self, *args):
+        return self._method_call('get_available_modules', *args)
+
+    def get_module_fields(self, *args):
+        return self._method_call('get_module_fields', *args)
+
+    def get_entries_count(self, *args):
+        return self._method_call('get_entries_count', *args)
+
+    def get_entry(self, *args):
+        return self._method_call('get_entry', *args)
+
+    def get_entries(self, *args):
+        return self._method_call('get_entries', *args)
+
+    def get_entry_list(self, *args):
+        return self._method_call('get_entry_list', *args)
+
+    def set_entry(self, *args):
+        return self._method_call('set_entry', *args)
+
+    def set_entries(self, *args):
+        return self._method_call('set_entries', *args)
+
+    def set_relationship(self, *args):
+        return self._method_call('set_relationship', *args)
+
+    def set_relationships(self, *args):
+        return self._method_call('set_relationships', *args)
+
+    def get_relationships(self, *args):
+        return self._method_call('get_relationships', *args)
+
+    def get_server_info(self, *args):
+        return self._method_call('get_server_info', *args)
+
+    def set_note_attachment(self, *args):
+        return self._method_call('set_note_attachment', *args)
+
+    def get_note_attachment(self, *args):
+        return self._method_call('get_note_attachment', *args)
+
+    def set_document_revision(self, *args):
+        return self._method_call('set_document_revision', *args)
+
+    def get_document_revision(self, *args):
+        return self._method_call('get_document_revision', *args)
+
+    def search_by_module(self, *args):
+        return self._method_call('search_by_module', *args)
+
+    def get_report_entries(self, *args):
+        return self._method_call('get_report_entries', *args)
+
+    def login(self):
+        """
+            Establish connection to the server.
+        """
+
+        args = {'user_auth': {'user_name': self._username,
+                              'password': self.password}}
+
+        x = self._sendRequest('login', args)
+        try:
+            return x['id']
+        except KeyError:
+            raise SugarUnhandledException
+
+    def logout(self, *args):
+        return self._method_call('logout', args)
+
+    def _method_call(self, method_name, *args):
+        try:
+            result = self._sendRequest(method_name,
+                                       [self._session] + list(args))
+        except SugarError as error:
+            if error.is_invalid_session:
+                # Try to recover if session ID was lost
+                self._session = self.login()
+                result = self._sendRequest(method_name,
+                                           [self._session] + list(args))
+            elif error.is_missing_module:
+                return None
+            elif error.is_null_response:
+                return None
+            elif error.is_invalid_request:
+                print(method_name, args)
+            else:
+                raise SugarUnhandledException('%d, %s - %s' %
+                                              (error.number,
+                                               error.name,
+                                               error.description))
+
+        return result
 
     def _sendRequest(self, method, data):
         """Sends an API request to the server, returns a dictionary with the
@@ -116,20 +176,6 @@ class Sugarcrm:
         if is_error(result):
             raise SugarError(result)
         return result
-
-    def _login(self):
-        """
-            Establish connection to the server.
-        """
-
-        args = {'user_auth': {'user_name': self._username,
-                              'password': self.password}}
-
-        x = self._sendRequest('login', args)
-        try:
-            return x['id']
-        except KeyError:
-            raise SugarUnhandledException
 
     def relate(self, main, *secondary, **kwargs):
         """
